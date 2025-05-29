@@ -5,19 +5,21 @@ const Table = require('../models/Table');
 // Place a order
 postOrder = async (req, res) => {
     try {
+
         const {
             type, orderTotal, deliveryTime, products, userName, userPhone, deliveryAddress, cookingInstructions
         } = req.body;
 
         // Generate order ID
-        const lastOrder = await Order.findOne().sort({ orderId: -1 }); // sort in descending order and find 1st record
-        const newOrderId = lastOrder ? lastOrder.orderId + 1 : 101;
+        const lastOrder = await Order.findOne().sort({ orderNo: -1 }); // sort in descending order and find 1st record
+        const newOrderNo = lastOrder ? lastOrder.orderNo + 1 : 101;
 
         // Assign a chef with minimum orders
-        const selectedChef = await Chef.findOne().sort({ orderTaken: 1 });
+        const selectedChef = await Chef.findOne().sort({ orderTaken: 1, orderTime: 1 });
 
         // Increment orderTaken count
         selectedChef.orderTaken += 1;
+        selectedChef.orderTime += deliveryTime;
         await selectedChef.save();
 
         // Assign table if dine-in
@@ -33,7 +35,7 @@ postOrder = async (req, res) => {
 
         //Create order
         const newOrder = new Order({
-            orderId: newOrderId,
+            orderNo: newOrderNo,
             type,
             deliveryTime,
             products,
@@ -49,9 +51,8 @@ postOrder = async (req, res) => {
         await newOrder.save();
 
         res.status(201).json({
-            orderId: newOrderId,
-            deliveryTime,
-            estimatedDuration: newOrder.duration
+            orderNo: newOrderNo,
+            deliveryTime
         });
 
     } catch (err) {
