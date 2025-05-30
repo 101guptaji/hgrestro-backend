@@ -17,9 +17,17 @@ app.get('/', (req, res) => {
     res.send("Hello HG");
 })
 
-// Use the workout router for all requests to the /api/order path
+// Use the order router for all requests to the /api/orders path
 const orderRouter = require('./route/orderRoute');
-app.use("/api/order", orderRouter);
+app.use("/api/orders", orderRouter);
+
+// Use the table router for all requests to the /api/table path
+const tableRouter = require('./route/tableRouter');
+app.use("/api/table", tableRouter);
+
+// Use the chef router for all requests to the /api/chef path
+const chefRouter = require('./route/chefRouter');
+app.use("/api/chef", chefRouter);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
