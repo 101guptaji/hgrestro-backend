@@ -3,7 +3,7 @@ const Chef = require('../models/Chef');
 const Table = require('../models/Table');
 const Order = require('../models/Order');
 
-mongoose.connect(process.env.MONGODB_LOCAL_URL)
+mongoose.connect(process.env.DATABASE_URL)
     .then(() => {
         console.log("Database connected");
         seedData();
