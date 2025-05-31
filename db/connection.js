@@ -3,7 +3,7 @@ const Chef = require('../models/Chef');
 const Table = require('../models/Table');
 const Order = require('../models/Order');
 
-mongoose.connect("mongodb://localhost:27017/hgrestroDB")
+mongoose.connect(process.env.MONGODB_LOCAL_URL)
     .then(() => {
         console.log("Database connected");
         seedData();
@@ -90,9 +90,9 @@ async function seedData() {
                 }
 
                 let assignedTable = null;
-                if (type === 'dineIn' && status !== 'done') {
+                if (type === 'dineIn') {
                     assignedTable = tables.find(t => !t.isReserved);
-                    if (assignedTable) {
+                    if (assignedTable && status !== 'done') {
                         assignedTable.isReserved = true;
                         await assignedTable.save();
                     }

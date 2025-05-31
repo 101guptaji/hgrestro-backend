@@ -1,4 +1,5 @@
 const Table = require('../models/Table')
+const Order = require('../models/Order')
 
 // Get all tables
 getAllTables = async (req, res) => {
@@ -38,10 +39,30 @@ postTable = async (req, res) => {
 // Delete a table
 deleteTable = async (req, res) => {
     try {
-        const table = await Table.findByIdAndDelete(req.params.id);
+        const tableId = req.params.id;
+
+        const table = await Table.findById(tableId);
         if (!table) {
             return res.status(404).json({ message: 'Cannot find table' });
         }
+
+        const deletedTableNo = table.tableNo;
+
+        // Delete the table
+        await Table.findByIdAndDelete(tableId);
+
+        // Shifting all tables with tableNo > deleted one
+        await Table.updateMany(
+            { tableNo: { $gt: deletedTableNo } },
+            { $inc: { tableNo: -1 } }
+        );
+
+        // Decrease tableNo for all orders assigned to tables after the deleted one
+        await Order.updateMany(
+            { type: 'dineIn', tableNo: { $gt: deletedTableNo } },
+            { $inc: { tableNo: -1 } }
+        );
+
         res.status(204).json({ message: 'Table deleted' });
     }
     catch (error) {

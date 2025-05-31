@@ -187,10 +187,10 @@ getRevenueByDay = async (req, res) => {
         const dayMap = { 1: 'Sun', 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 7: 'Sat' };
 
         const init = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        
+
         result = init.map(label => ({ label, revenue: 0 }));
-        
-        revenueData.forEach(({dayOfWeek, totalRevenue }) => {
+
+        revenueData.forEach(({ dayOfWeek, totalRevenue }) => {
             const label = dayMap[dayOfWeek];
             for (let entry of result) {
                 if (entry.label === label) {
@@ -260,7 +260,7 @@ getRevenueByWeek = async (req, res) => {
         const currWeekNo = getISOWeekNumber(new Date());
 
         // inserting actual revenue data
-        revenueData.forEach(({week, totalRevenue }) => {
+        revenueData.forEach(({ week, totalRevenue }) => {
             let newWeek = currWeekNo - week;
 
             for (let entry of result) {
@@ -334,14 +334,14 @@ getRevenueByMonth = async (req, res) => {
         const now = new Date();
         for (let i = 6; i >= 0; i--) {
             const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const label = date.toLocaleString('default', { month: 'short'});
+            const label = date.toLocaleString('default', { month: 'short' });
             result.push({ label, revenue: 0 });
         }
 
         // inserting revenue into result
         revenueData.forEach(({ year, month, totalRevenue }) => {
             const date = new Date(year, month - 1, 1);
-            const label = date.toLocaleString('default', { month: 'short'});
+            const label = date.toLocaleString('default', { month: 'short' });
 
             for (let entry of result) {
                 if (entry.label === label) {
@@ -425,6 +425,57 @@ getRevenueByYear = async (req, res) => {
     }
 }
 
+getAllOrders = async (req, res) => {
+    try {
+        const orders = await Order.find().sort({ orderNo: -1 });
+
+        res.status(200).json(orders);
+    }
+    catch (error) {
+        console.log("Error: ", error);
+        res.status(500).json({ message: error.message });
+    }
+}
+
+updateOrder = async (req, res) => {
+    try {
+        const id = req.params.id;
+
+        // Fetch the order
+        const order = await Order.findById(id);
+        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        // If already done, do nothing
+        if (order.status === 'done') {
+            return res.status(400).json({ message: 'Order is already marked as done' });
+        }
+
+        // Update order status to "done"
+        order.status = 'done';
+        await order.save();
+
+        // Update Chef's orderTime
+        if (order.chefId && order.deliveryTime) {
+            await Chef.findByIdAndUpdate(order.chefId, {
+                $inc: { orderTime: -order.deliveryTime }
+            });
+        }
+
+        // Free up table if dineIn and table is assigned
+        if (order.type === 'dineIn' && order.tableNo) {
+            await Table.findOneAndUpdate(
+                { tableNo: order.tableNo },
+                { isReserved: false }
+            );
+        }
+
+        res.status(200).json({ message: 'Order is updated and marked done.' });
+    }
+    catch (error) {
+        console.log("Error: ", error);
+        res.status(500).json({ message: error.message });
+    }
+}
 
 module.exports = {
     postOrder,
@@ -433,5 +484,7 @@ module.exports = {
     getRevenueByDay,
     getRevenueByWeek,
     getRevenueByMonth,
-    getRevenueByYear
+    getRevenueByYear,
+    getAllOrders,
+    updateOrder
 }

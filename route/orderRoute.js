@@ -1,10 +1,16 @@
 const express = require('express');
 const router = express.Router();
 
-const {postOrder, getOrdersAnalytics, getOrderSummary, getRevenueByDay, getRevenueByMonth, getRevenueByYear} = require('../controller/orderController');
+const { postOrder, getOrdersAnalytics, getOrderSummary, getRevenueByDay, getRevenueByMonth, getRevenueByYear, getAllOrders, updateOrder } = require('../controller/orderController');
 
 // Place a order
 router.post('/', postOrder);
+
+// Get all orders
+router.get('/', getAllOrders);
+
+// Get update order
+router.patch('/:id', updateOrder);
 
 // Get orders analytics
 router.get('/analytics', getOrdersAnalytics)
