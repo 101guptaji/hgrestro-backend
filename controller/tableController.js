@@ -4,7 +4,7 @@ const Order = require('../models/Order')
 // Get all tables
 getAllTables = async (req, res) => {
     try {
-        const tables = await Table.find();
+        const tables = await Table.find().sort({tableNo: 1});
 
         // console.log(tables)
 
