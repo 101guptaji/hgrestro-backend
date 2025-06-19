@@ -27,8 +27,11 @@ postOrder = async (req, res) => {
         if (type === 'dineIn') {
             assignedTable = await Table.findOneAndUpdate(
                 { isReserved: false },
-                { isReserved: true },
-                { new: true }
+                { $set: { isReserved: true } },
+                {
+                    sort: { tableNo: 1 },                
+                    new: true         
+                }
             );
             if (!assignedTable) return res.status(400).json({ message: 'No tables available' });
         }
