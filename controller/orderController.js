@@ -77,8 +77,8 @@ getOrdersAnalytics = async (req, res) => {
     }
 }
 
-// Get date of n weeks before
-function getStartOfNWeek(n) {
+// Get date of n weeks ago
+function getDateOfNWeekAgo(n) {
     const now = new Date();
     const diff = now.getDate() - 6 * n;
     const start = new Date(now.setDate(diff));
@@ -86,35 +86,36 @@ function getStartOfNWeek(n) {
     return start;
 }
 
-// Get date of n month before
-function getStartOfNMonth(n) {
+// Get date of n month ago
+function getDateOfNMonthAgo(n) {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - n, now.getDate());
     start.setHours(0, 0, 0, 0);
     return start;
 }
 
-// Get date of n year before
-function getStartOfNYear(n) {
+// Get date of n year ago
+function getDateOfNYearAgo(n) {
     const now = new Date();
     const start = new Date(now.getFullYear() - n, now.getMonth(), now.getDate());
     start.setHours(0, 0, 0, 0);
     return start;
 }
 
+// Get order count - dineIn, takeAway and done,  based on different filters
 getOrderSummary = async (req, res) => {
     try {
         const filter = req.query.filter || 'daily';
         let startDate;
 
         if (filter === 'yearly') {
-            startDate = getStartOfNYear(1);
+            startDate = getDateOfNYearAgo(1);
         }
         else if (filter === 'monthly') {
-            startDate = getStartOfNMonth(1);
+            startDate = getDateOfNMonthAgo(1);
         }
         else if (filter === 'weekly') {
-            startDate = getStartOfNWeek(1);
+            startDate = getDateOfNWeekAgo(1);
         }
         else {
             startDate = new Date();
@@ -144,7 +145,7 @@ getOrderSummary = async (req, res) => {
 
 getRevenueByDay = async (req, res) => {
     try {
-        const startDate = getStartOfNWeek(1);
+        const startDate = getDateOfNWeekAgo(1);
         const endDate = new Date();
 
         let revenueData = await Order.aggregate([
@@ -210,7 +211,7 @@ getRevenueByDay = async (req, res) => {
 
 getRevenueByWeek = async (req, res) => {
     try {
-        const startDate = getStartOfNWeek(7);
+        const startDate = getDateOfNWeekAgo(8);
         const endDate = new Date();
 
         let revenueData = await Order.aggregate([
@@ -257,6 +258,7 @@ getRevenueByWeek = async (req, res) => {
         }
 
         const currWeekNo = getISOWeekNumber(new Date());
+        // console.log("currWeekNo: ", currWeekNo);
 
         // inserting actual revenue data
         revenueData.forEach(({ week, totalRevenue }) => {
@@ -279,17 +281,19 @@ getRevenueByWeek = async (req, res) => {
     }
 }
 
+// ISO Weeks start on Monday.
+// ISO Week 1 of a year is the one that has at least 4 days in January.
 function getISOWeekNumber(date) {
-    const tempDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = tempDate.getUTCDay() || 7;
-    tempDate.setUTCDate(tempDate.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(tempDate.getUTCFullYear(), 0, 1));
-    return Math.ceil((((tempDate - yearStart) / 86400000) + 1) / 7);
+    const tempDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())); // Creates a UTC date with no time involved
+    const dayNum = tempDate.getUTCDay() || 7; // getUTCDay() returns 0 for Sunday; In ISO, Sunday = 7
+    tempDate.setUTCDate(tempDate.getUTCDate() + 4 - dayNum); // shifts the date to the Thursday of the current ISO week
+    const yearStart = new Date(Date.UTC(tempDate.getUTCFullYear(), 0, 1)); // Gets January 1st of the ISO year (after shift) in UTC.
+    return Math.ceil((((tempDate - yearStart) / 86400000) + 1) / 7); // 86400000 = milliseconds in a day.
 }
 
 getRevenueByMonth = async (req, res) => {
     try {
-        const startDate = getStartOfNMonth(7);
+        const startDate = getDateOfNMonthAgo(7);
         const endDate = new Date();
 
         let revenueData = await Order.aggregate([
@@ -360,7 +364,7 @@ getRevenueByMonth = async (req, res) => {
 
 getRevenueByYear = async (req, res) => {
     try {
-        const startDate = getStartOfNYear(7);
+        const startDate = getDateOfNYearAgo(7);
         const endDate = new Date();
 
         let revenueData = await Order.aggregate([
@@ -406,10 +410,9 @@ getRevenueByYear = async (req, res) => {
 
         // inserting revenue into result
         revenueData.forEach(({ year, totalRevenue }) => {
-            const label = year;
 
             for (let entry of result) {
-                if (entry.label === label) {
+                if (entry.label === year) {
                     entry.revenue = totalRevenue;
                 }
             }
