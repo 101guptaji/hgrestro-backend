@@ -5,16 +5,15 @@ const Table = require('../models/Table');
 // Place a order
 postOrder = async (req, res) => {
     try {
-
         const {
             type, orderTotal, deliveryTime, products, userName, userPhone, deliveryAddress, cookingInstructions
         } = req.body;
 
-        // Generate order ID
+        // generate order no
         const lastOrder = await Order.findOne().sort({ orderNo: -1 }); // sort in descending order and find 1st record
         const newOrderNo = lastOrder ? lastOrder.orderNo + 1 : 101;
 
-        // Assign a chef with minimum orders
+        // finding the chef with minimum orderTaken and minimum orderTime
         const selectedChef = await Chef.findOne().sort({ orderTaken: 1, orderTime: 1 });
 
         // Increment orderTaken count
@@ -25,15 +24,13 @@ postOrder = async (req, res) => {
         // Assign table if dine-in
         let assignedTable = null;
         if (type === 'dineIn') {
-            assignedTable = await Table.findOneAndUpdate(
-                { isReserved: false },
-                { $set: { isReserved: true } },
-                {
-                    sort: { tableNo: 1 },                
-                    new: true         
-                }
-            );
-            if (!assignedTable) return res.status(400).json({ message: 'No tables available' });
+            assignedTable = await Table.findOne({ isReserved: false }).sort({ tableNo: 1 });
+
+            if (!assignedTable) 
+                return res.status(400).json({ message: 'No tables available' });
+
+            assignedTable.isReserved = true;
+            await assignedTable.save();
         }
 
         //Create order
@@ -54,8 +51,7 @@ postOrder = async (req, res) => {
         await newOrder.save();
 
         res.status(201).json({
-            orderNo: newOrderNo,
-            deliveryTime
+            orderNo: newOrderNo
         });
 
     } catch (err) {
@@ -458,7 +454,7 @@ updateOrder = async (req, res) => {
         await order.save();
 
         // Update Chef's orderTime
-        if (order.chefId && order.deliveryTime) {
+        if (order.chefId) {
             await Chef.findByIdAndUpdate(order.chefId, {
                 $inc: { orderTime: -order.deliveryTime }
             });

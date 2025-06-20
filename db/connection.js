@@ -6,15 +6,15 @@ const Order = require('../models/Order');
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => {
         console.log("Database connected");
-        seedData();
+        addDummyData();
     })
     .catch((err) => {
         console.log("Error in database connection", err);
     });
 
-async function seedData() {
+async function addDummyData() {
     try {
-        // check for any data
+        // insert dummy chef data if no chef
         const chef = await Chef.findOne();
         if (!chef) {
             const chefs = [
@@ -26,9 +26,10 @@ async function seedData() {
 
             await Chef.insertMany(chefs);
 
-             console.log("Dummy Chefs inserted");
+            console.log("Dummy Chefs inserted");
         }
 
+        // insert dummy table data if no table
         const table = await Table.findOne();
         if (!table) {
             const tables = []
@@ -40,9 +41,10 @@ async function seedData() {
 
             await Table.insertMany(tables);
 
-             console.log("Dummy Tables inserted");
+            console.log("Dummy Tables inserted");
         }
 
+        // insert dummy order data if no order
         const order = await Order.findOne();
         if (!order) {
 
@@ -50,32 +52,30 @@ async function seedData() {
             const tables = await Table.find();
             let orderIdCounter = 101;
 
+            // sample product template
             const productTemplates = [
-                [{ name: "Pizza", quantity: 1, price: 299 }],
-                [{ name: "Burger", quantity: 2, price: 149 }],
-                [{ name: "French Fries", quantity: 2, price: 99 }],
-                [{ name: "Veggie", quantity: 1, price: 89 }, { name: "Drinks", quantity: 1, price: 79 }],
-                [{ name: "Pizza", quantity: 1, price: 299 }, { name: "Drinks", quantity: 2, price: 79 }, { name: "Burger", quantity: 2, price: 149 }],
+                [{ name: "Pizza", quantity: 1, bakingTime: 30, price: 299 }],
+                [{ name: "Burger", quantity: 2, bakingTime: 20, price: 149 }],
+                [{ name: "French Fries", quantity: 2, bakingTime: 10, price: 99 }],
+                [{ name: "Veggie", quantity: 1, bakingTime: 10, price: 89 }, { name: "Drinks", quantity: 1, bakingTime: 10, price: 79 }],
+                [{ name: "Pizza", quantity: 1, bakingTime: 30, price: 299 }, { name: "Drinks", quantity: 2, bakingTime: 10, price: 79 }, { name: "Burger", quantity: 2, bakingTime: 20, price: 149 }],
             ];
-
-            const timeMap = { pizza: 30, burger: 20, veggie: 10, drinks: 10, fries: 10 };
 
             for (let i = 0; i < 20; i++) {
                 const type = i % 2 === 0 ? "dineIn" : "takeAway";
                 const products = productTemplates[i % productTemplates.length];
 
-                // Calculate delivery time
+                // calculating delivery time
                 let deliveryTime = 0;
                 let orderTotal = 0;
                 products.forEach(p => {
-                    const name = p.name.toLowerCase();
-                    deliveryTime += (timeMap[name] || 10) * p.quantity;
+                    deliveryTime += p.bakingTime * p.quantity;
                     orderTotal += p.price * p.quantity;
                 });
 
-                let status = i % 5 === 0 ? "done" : "processing";
+                let status = "processing";
 
-                // Find the best chef: min orderTaken, then min orderTime
+                // finding the chef with minimum orderTaken and minimum orderTime
                 chefs.sort((a, b) => {
                     if (a.orderTaken !== b.orderTaken)
                         return a.orderTaken - b.orderTaken;
@@ -84,17 +84,14 @@ async function seedData() {
                 });
                 const selectedChef = chefs[0];
                 selectedChef.orderTaken++;
+                selectedChef.orderTime += deliveryTime;
 
-                if (status !== 'done') {
-                    selectedChef.orderTime += deliveryTime;
-                }
-
+                // Assign table if dine-in
                 let assignedTable = null;
                 if (type === 'dineIn') {
                     assignedTable = tables.find(t => !t.isReserved);
-                    if (assignedTable && status !== 'done') {
+                    if (assignedTable) {
                         assignedTable.isReserved = true;
-                        await assignedTable.save();
                     }
                 }
 
@@ -115,13 +112,14 @@ async function seedData() {
                 });
 
                 await order.save();
+                await assignedTable.save();
                 await selectedChef.save();
             }
 
             console.log("Dummy Orders inserted");
         }
 
-        
+
     } catch (err) {
         console.error("Error inserting dummy data:", err);
     }
