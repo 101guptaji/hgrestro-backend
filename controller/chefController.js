@@ -5,8 +5,6 @@ getAllChef = async (req, res) =>{
     try {
         const chef = await Chef.find();
 
-        // console.log(chef)
-
         res.status(200).json(chef);
     } 
     catch (error) {

@@ -12,6 +12,7 @@ mongoose.connect(process.env.DATABASE_URL)
         console.log("Error in database connection", err);
     });
 
+// function to insert dummy data
 async function addDummyData() {
     try {
         // insert dummy chef data if no chef

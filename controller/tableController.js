@@ -6,8 +6,6 @@ getAllTables = async (req, res) => {
     try {
         const tables = await Table.find().sort({tableNo: 1});
 
-        // console.log(tables)
-
         res.status(200).json(tables);
     }
     catch (error) {
@@ -51,7 +49,7 @@ deleteTable = async (req, res) => {
         // Delete the table
         await Table.findByIdAndDelete(tableId);
 
-        // Shifting all tables with tableNo > deleted one
+        // Shift all tables with tableNo > deleted one
         await Table.updateMany(
             { tableNo: { $gt: deletedTableNo } },
             { $inc: { tableNo: -1 } }
